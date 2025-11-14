@@ -1,0 +1,18 @@
+<div class="livetalk-container">
+  <div class="title-text">Speak to Elizabeth</div>
+
+  <div class="mic-wrapper" (click)="micClick()">
+    <img
+      src="assets/images/Speak to Elizabeth_web.gif"
+      alt="Voice Assistant Animation"
+    />
+  </div>
+
+  <!-- This now dynamically displays the status from the service -->
+  <div class="status-text">
+    {{ statusText }}
+  </div>
+
+  <!-- Audio player can be managed by the transport service if needed -->
+  <audio id="audioPlayer" autoplay controls hidden></audio>
+</div>

@@ -1,0 +1,160 @@
+<div class="live-wrapper">
+  <!-- ============================================ -->
+  <!-- HEADER -->
+  <!-- ============================================ -->
+  <div class="header">
+    <span class="back-arrow">&#8592;</span>
+    <h1 class="title">Melodie</h1>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- TABS -->
+  <!-- ============================================ -->
+  <div class="tabs">
+    <a
+      class="tab"
+      [class.active]="isActiveMode(ConversationMode.VOICE)"
+      (click)="switchMode(ConversationMode.VOICE)"
+      [style.cursor]="!isInitialized ? 'not-allowed' : 'pointer'"
+    >
+      LiveTalk
+    </a>
+    <a
+      class="tab"
+      [class.active]="isActiveMode(ConversationMode.CHAT)"
+      (click)="switchMode(ConversationMode.CHAT)"
+      [style.cursor]="!isInitialized ? 'not-allowed' : 'pointer'"
+    >
+      Chat
+    </a>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- ERROR MESSAGE -->
+  <!-- ============================================ -->
+  <div class="error-message" *ngIf="initError">
+    {{ initError }}
+  </div>
+
+  <!-- ============================================ -->
+  <!-- LOADING STATE -->
+  <!-- ============================================ -->
+  <div class="loading-state" *ngIf="!isInitialized && !initError">
+    <div class="spinner"></div>
+    <p>Initializing conversation service...</p>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- TAB CONTENT -->
+  <!-- ============================================ -->
+  <div class="tab-content" *ngIf="isInitialized">
+    <!-- ========================================== -->
+    <!-- LIVETALK VIEW (Voice Mode) -->
+    <!-- ========================================== -->
+    <div
+      class="livetalk-container"
+      *ngIf="isActiveMode(ConversationMode.VOICE)"
+    >
+      <div class="title-text">Speak to Elizabeth</div>
+
+      <!-- <div class="mic-wrapper" (click)="toggleVoice()">
+        <img
+          src="assets/images/Speak to Elizabeth_web.gif"
+          alt="Voice Assistant Animation"
+        />
+      </div> -->
+
+      <div
+        class="mic-wrapper"
+        (mousedown)="startListening($event)"
+        (mouseup)="stopListening($event)"
+        (mouseleave)="stopListening($event)"
+        (touchstart)="startListening($event)"
+        (touchend)="stopListening($event)"
+      >
+        <!-- ✅ IDLE STATE (not listening) -->
+        <svg
+          *ngIf="!isListening"
+          xmlns="http://www.w3.org/2000/svg"
+          width="120"
+          height="120"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="mic-icon"
+        >
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+
+        <!-- ✅ ACTIVE STATE (listening) -->
+        <img
+          *ngIf="isListening"
+          src="assets/images/Speak to Elizabeth_web.gif"
+          alt="Listening..."
+          class="pulsing"
+        />
+      </div>
+
+      <div class="status-text">
+        {{ statusText }}
+      </div>
+
+      <!-- Audio player -->
+      <audio id="audioPlayer" autoplay controls hidden></audio>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- CHAT VIEW -->
+    <!-- ========================================== -->
+    <div class="chat-container" *ngIf="isActiveMode(ConversationMode.CHAT)">
+      <!-- Message Area -->
+      <div class="messages-area">
+        <div
+          *ngFor="let message of messages"
+          class="message"
+          [class.incoming]="message.sender === 'bot'"
+          [class.outgoing]="message.sender === 'user'"
+        >
+          <div class="message-content">
+            {{ message.text }}
+          </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="message incoming" *ngIf="isTyping">
+          <div class="message-content typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message Input Area -->
+      <div class="message-input-area">
+        <input
+          type="text"
+          class="message-input"
+          placeholder="Type a message..."
+          [(ngModel)]="newMessage"
+          (keypress)="onKeyPress($event)"
+          [disabled]="isTyping"
+        />
+
+        <button
+          class="send-button"
+          (click)="sendMessage()"
+          [disabled]="!newMessage.trim() || isTyping"
+        >
+          <img src="assets/images/send-icon.svg" alt="Send" />
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

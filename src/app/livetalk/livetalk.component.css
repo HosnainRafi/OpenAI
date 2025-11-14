@@ -1,0 +1,61 @@
+/* Main container for the LiveTalk view */
+.livetalk-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Horizontally center all items */
+  justify-content: center; /* Vertically center all items */
+  height: 75vh; /* Make it tall enough to fill the space */
+  padding: 20px;
+  box-sizing: border-box; /* Ensures padding doesn't add to height */
+  text-align: center;
+}
+
+/* "Speak to Elizabeth" text */
+.title-text {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 40px; /* Space between title and microphone */
+}
+
+/* Wrapper for the microphone SVG */
+.mic-wrapper {
+  cursor: pointer;
+  margin-bottom: 20px; /* Space between microphone and status text */
+  /* The SVG's size should be controlled from within the SVG code or via ::ng-deep if needed */
+}
+
+/* Status text like "Listening..." or "Click to speak" */
+.status-text {
+  font-size: 16px;
+  color: #777;
+  height: 24px; /* Reserve space to prevent layout shifts */
+  font-style: italic;
+}
+
+.content {
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+
+  /* 
+    We must give the container a height, otherwise "vertical centering" has no meaning.
+    75vh means it will take up 75% of the viewport's height.
+  */
+  height: 75vh;
+  width: 100%;
+}
+
+/* 
+  This ensures that the image inside the animationDiv is also centered, 
+  in case the div itself has extra space.
+*/
+.animationDiv {
+  text-align: center;
+}
+
+/* Optional: You can add this if your GIF is too large */
+.animationDiv img {
+  max-width: 100%;
+  height: auto;
+}

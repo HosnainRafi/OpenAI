@@ -1,0 +1,324 @@
+/* ============================================ */
+/* LIVE WRAPPER (Original Design) */
+/* ============================================ */
+.live-wrapper {
+  max-width: 800px;
+  margin: 20px auto;
+  font-family: Arial, sans-serif;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 15px;
+  background-color: #fff;
+}
+
+/* ============================================ */
+/* HEADER (Original Design) */
+/* ============================================ */
+.header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 15px;
+}
+
+.back-arrow {
+  font-size: 24px;
+  cursor: pointer;
+  padding-right: 15px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+  flex-grow: 1;
+}
+
+/* ============================================ */
+/* TABS (Original Design) */
+/* ============================================ */
+.tabs {
+  display: flex;
+  background-color: #e9ecef;
+  border-radius: 25px;
+  padding: 5px;
+  margin-bottom: 15px;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  text-decoration: none;
+  color: #888;
+  font-weight: 500;
+  border-radius: 20px;
+  transition: background-color 0.3s, color 0.3s;
+  cursor: pointer;
+}
+
+.tab.active {
+  background-color: #ffffff;
+  color: #000;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab:hover:not(.active) {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================ */
+/* ERROR & LOADING STATES */
+/* ============================================ */
+.error-message {
+  padding: 15px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 5px;
+  color: #721c24;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 15px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e9ecef;
+  border-top-color: #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-state p {
+  color: #888;
+  font-size: 14px;
+}
+
+/* ============================================ */
+/* TAB CONTENT */
+/* ============================================ */
+.tab-content {
+  /* Container for switching between views */
+}
+
+/* ============================================ */
+/* LIVETALK VIEW (Original Design) */
+/* ============================================ */
+.livetalk-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 75vh;
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.title-text {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 40px;
+}
+
+/* Mic wrapper - indicate it's pressable */
+.mic-wrapper {
+  cursor: pointer;
+  margin-bottom: 20px;
+  user-select: none; /* Prevent text selection on press */
+  transition: transform 0.1s ease;
+}
+
+/* Visual feedback when pressed */
+.mic-wrapper:active {
+  transform: scale(0.95);
+}
+
+.mic-wrapper img {
+  max-width: 100%;
+  height: auto;
+  transition: filter 0.2s ease;
+}
+
+/* Pulsing animation when listening */
+.mic-wrapper img.pulsing {
+  animation: pulse 1.5s infinite;
+  filter: brightness(1.2);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* Status text changes color when active */
+.status-text {
+  font-size: 16px;
+  color: #777;
+  height: 24px;
+  font-style: italic;
+  transition: color 0.3s ease;
+}
+
+.status-text.active {
+  color: #007bff; /* Blue when listening */
+  font-weight: bold;
+}
+
+/* ============================================ */
+/* CHAT VIEW (Original Design) */
+/* ============================================ */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 75vh;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.messages-area {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.message {
+  display: flex;
+  margin-bottom: 15px;
+  max-width: 90%;
+}
+
+.message-content {
+  padding: 12px 18px;
+  border-radius: 20px;
+  line-height: 1.5;
+}
+
+.message.incoming {
+  justify-content: flex-start;
+}
+
+.message.incoming .message-content {
+  background-color: #ffffff;
+  color: #333;
+  border: 1px solid #eee;
+}
+
+.message.outgoing {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.message.outgoing .message-content {
+  background-color: #e0f0ff;
+  color: #333;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 12px 18px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background-color: #999;
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+.message-input-area {
+  display: flex;
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+.message-input {
+  flex-grow: 1;
+  border: none;
+  background-color: #f0f2f5;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-size: 16px;
+  outline: none;
+}
+
+.message-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.send-button {
+  background-color: #007bff;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  margin-left: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.send-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.send-button img {
+  width: 24px;
+  height: 24px;
+}

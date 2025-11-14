@@ -1,0 +1,91 @@
+/* Main container for the chat interface */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 75vh; /* Adjusted height */
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Area where messages are displayed */
+.messages-area {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto; /* Allow scrolling */
+}
+
+/* General styling for all messages */
+.message {
+  display: flex;
+  margin-bottom: 15px;
+  max-width: 90%;
+}
+
+.message-content {
+  padding: 12px 18px;
+  border-radius: 20px;
+  line-height: 1.5;
+}
+
+/* Incoming messages (from assistant) */
+.message.incoming {
+  justify-content: flex-start;
+}
+
+.message.incoming .message-content {
+  background-color: #ffffff;
+  color: #333;
+  border: 1px solid #eee;
+}
+
+/* Outgoing messages (from user) */
+.message.outgoing {
+  margin-left: auto; /* Push to the right */
+  justify-content: flex-end;
+}
+
+.message.outgoing .message-content {
+  background-color: #e0f0ff;
+  color: #333;
+}
+
+/* Container for the text input and send button */
+.message-input-area {
+  display: flex;
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+.message-input {
+  flex-grow: 1;
+  border: none;
+  background-color: #f0f2f5;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-size: 16px;
+  outline: none;
+}
+
+.send-button {
+  background-color: #007bff;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  margin-left: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+.send-button img {
+  width: 24px;
+  height: 24px;
+}
