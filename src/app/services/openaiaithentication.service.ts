@@ -15,13 +15,13 @@ export class OpenAIAuthenticationService {
 
 
     // for finance Magic 
-    //baseApiUrl: string = "https://enm.financemagic.co.uk";
+    baseApiUrl: string = "https://enm.financemagic.co.uk";
 
     //for Mortgage Magic
     //baseApiUrl: string = "https://admin.mortgage-magic.co.uk";
 
     //Demo for testing 
-      baseApiUrl: string = "https://demo.financemagic.co.uk"
+      //baseApiUrl: string = "https://demo.financemagic.co.uk"
 
     //for for UAM and Legate Technologies
     //baseApiUrl: string = "https://erp.u-am.ae";

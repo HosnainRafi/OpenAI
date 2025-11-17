@@ -235,167 +235,87 @@ export class UnifiedConversationComponent implements OnInit, OnDestroy {
   }
 
   // ✅ Function: sourceMortgageProductsFunction - matches Flutter implementation
-  private sourceMortgageProducts(args: any, callId: string): void {
-    const mortgageType = args.mortgageType || "Residential Mortgage";
-    const property = args.propertyValuationAmount;
-    const loan = args.loanAmount;
+  private sourceMortgageProducts(argumentsStr: string, callId: string): void {
+    try {
+      const args = JSON.parse(argumentsStr);
+      console.log("🔍 Sourcing mortgage products with:", args);
 
-    console.log(
-      "\n╔════════════════════════════════════════════════════════════════╗"
-    );
-    console.log(
-      "║           🏠 MORTGAGE SOURCING REQUEST                         ║"
-    );
-    console.log(
-      "╚════════════════════════════════════════════════════════════════╝"
-    );
-    console.log("📋 Function: sourceMortgageProductsFunction");
-    console.log("📋 Call ID:", callId);
-    console.log("📋 Mortgage Type:", mortgageType);
-    console.log("🏘️  Property Valuation: £" + property.toLocaleString());
-    console.log("💰 Loan Amount: £" + loan.toLocaleString());
-    console.log("📊 LTV: " + ((loan / property) * 100).toFixed(2) + "%");
-    console.log(
-      "═══════════════════════════════════════════════════════════════════\n"
-    );
+      // Calculate LTV (Loan to Value)
+      const loanAmount =
+        args.loanAmount || this.mortgageApplyParams.loanAmount || 0;
+      const propertyValue =
+        args.propertyValuationAmount ||
+        this.mortgageApplyParams.propertyValuationAmount ||
+        0;
+      const loanToValue =
+        propertyValue > 0
+          ? ((loanAmount / propertyValue) * 100).toFixed(2)
+          : "0";
 
-    // Store parameters for later use (matches Flutter mortgageApplyParams)
-    this.mortgageApplyParams = {
-      criteria: 1,
-      propertyValuationAmount: property,
-      loanAmount: loan,
-      initialRatePeriodMonths: 24,
-      totalTermMonth: 240,
-      ltvAmount: ((loan / property) * 100).toFixed(2),
-      page: this.productPage,
-      count: 1,
-      productTypeId: this.getMortgageTypeId(mortgageType),
-      productCategoryId: 0,
-      orderBy: "",
-      paymentMethod: "Repayment",
-      interestOnlyAmount: 0,
-      mortgageType: mortgageType,
-      isAddFeesToTheLoan: "No",
-      isNoProductFee: "No",
-      isProductTypeShowDirectProducts: "No",
-      userId: this._userId,
-      userCompanyId: this._userCompanyId,
-      initiatorId: this._initiatorId,
-      country: "United Kingdom",
-      isProductTypeFixed: false,
-      isProductTypeDiscount: false,
-      isProductTypeTracker: false,
-      isProductTypeVariable: false,
-      preferredMortgageTermYear: 20,
-      preferredMortgageTermMonth: 0,
-    };
+      // Map to AngularJS search parameters
+      const searchParams = {
+        loanAmount: loanAmount,
+        propertyValue: propertyValue,
+        mortgageTermYear: args.mortgageTermYear || 25,
+        mortgageTermMonth: args.mortgageTermMonth || 0,
+        productTypeId: args.productTypeId || 1, // 1 = Residential
+        paymentMethod: args.paymentMethod || "Capital and Interest",
+        initialRatePeriodMonths: args.initialPeriodMonth || 24,
+        loanToValue: parseFloat(loanToValue),
+      };
 
-    console.log(
-      "╔════════════════════════════════════════════════════════════════╗"
-    );
-    console.log(
-      "║           💾 STORED MORTGAGE PARAMETERS                        ║"
-    );
-    console.log(
-      "╚════════════════════════════════════════════════════════════════╝"
-    );
-    console.log(JSON.stringify(this.mortgageApplyParams, null, 2));
-    console.log(
-      "═══════════════════════════════════════════════════════════════════\n"
-    );
+      console.log("📊 Search Parameters:", searchParams);
 
-    // TODO: Replace with actual GraphQL API call like Flutter: GraphqlApiService().sourceProductsFromQuery()
-    // For now, return a mock response matching Flutter's product structure
-    const mockProduct = {
-      lender: "Example Bank",
-      initialPayRate: 3.5,
-      mortgageClass: "Fixed Rate",
-      duration: "2 years",
-      maximumLtvAvailable: 80,
-      arrangementFee: 999,
-      initialMonthlyPayment: 1250.5,
-      loanAmount: loan,
-      id: 123,
-      lenderId: 456,
-      productType: mortgageType,
-    };
+      // ✅ Send to AngularJS parent - this will trigger $scope.searchUserQuoteButtonClick()
+      this.triggerAngularJSMortgageSearch(searchParams);
 
-    console.log(
-      "╔════════════════════════════════════════════════════════════════╗"
-    );
-    console.log(
-      "║           📦 PRODUCT SOURCED (MOCK)                            ║"
-    );
-    console.log(
-      "╚════════════════════════════════════════════════════════════════╝"
-    );
-    console.log("🏦 Lender:", mockProduct.lender);
-    console.log("💵 Rate:", mockProduct.initialPayRate + "%");
-    console.log("🏷️  Type:", mockProduct.mortgageClass);
-    console.log("⏰ Duration:", mockProduct.duration);
-    console.log("📈 Max LTV:", mockProduct.maximumLtvAvailable + "%");
-    console.log("💳 Fee: £" + mockProduct.arrangementFee.toLocaleString());
-    console.log(
-      "📅 Monthly: £" + mockProduct.initialMonthlyPayment.toLocaleString()
-    );
-    console.log("Full Product JSON:", JSON.stringify(mockProduct, null, 2));
-    console.log(
-      "═══════════════════════════════════════════════════════════════════\n"
-    );
+      // Send response to AI
+      const output = `Perfect! I'm searching for mortgage products with:\n- Loan Amount: £${loanAmount.toLocaleString()}\n- Property Value: £${propertyValue.toLocaleString()}\n- Mortgage Term: ${
+        searchParams.mortgageTermYear
+      } years ${
+        searchParams.mortgageTermMonth
+      } months\n- LTV: ${loanToValue}%\n\nPlease wait while I fetch the best deals for you...`;
 
-    // Format message matching Flutter's msg format
-    const msg = `${mockProduct.lender} offers a ${
-      mockProduct.initialPayRate
-    }% ${mockProduct.mortgageClass} residential mortgage for ${
-      mockProduct.duration
-    }, available to new borrowers with a maximum LTV of ${
-      mockProduct.maximumLtvAvailable
-    }%, providing an initial monthly repayment of £${mockProduct.initialMonthlyPayment.toFixed(
-      2
-    )} for a £${
-      mockProduct.loanAmount
-    } loan.\n\nProduct Details: ${JSON.stringify(mockProduct)}`;
+      this.submitFunctionOutput(callId, output);
 
-    console.log(
-      "╔════════════════════════════════════════════════════════════════╗"
-    );
-    console.log(
-      "║           📤 SUBMITTING FUNCTION OUTPUT                        ║"
-    );
-    console.log(
-      "╚════════════════════════════════════════════════════════════════╝"
-    );
-    console.log("Message to AI:", msg);
-    console.log(
-      "═══════════════════════════════════════════════════════════════════\n"
-    );
+      console.log("✅ sourceMortgageProducts completed");
+    } catch (error) {
+      console.error("❌ Error in sourceMortgageProducts:", error);
+      this.submitFunctionOutput(
+        callId,
+        "Sorry, there was an error searching for mortgage products. Please try again."
+      );
+    }
+  }
 
-    this.submitFunctionOutput(callId, msg);
-    this.productPage++;
+  private sendMessageToParent(eventType: string, payload: any): void {
+    if (window.parent && window.parent !== window) {
+      const message = {
+        source: "MELODIE_AI",
+        type: eventType,
+        data: payload,
+        timestamp: new Date().toISOString(),
+      };
 
-    console.log(
-      "✅ sourceMortgageProductsFunction completed. Product page incremented to:",
-      this.productPage
-    );
-    console.log(
-      "═══════════════════════════════════════════════════════════════════\n"
-    );
+      // Send to parent window (AngularJS)
+      window.parent.postMessage(message, "*");
+      console.log("📤 Sent to AngularJS parent:", message);
+    } else {
+      console.warn("⚠️ No parent window found");
+    }
   }
 
   // ✅ Function: applyToMortgageProduct - matches Flutter implementation
   private applyMortgageProduct(args: any, callId: string): void {
     const product = args.product;
-
     console.log(
       "\n╔════════════════════════════════════════════════════════════════╗"
     );
-    console.log(
-      "║           📝 MORTGAGE APPLICATION SUBMISSION                   ║"
-    );
+    console.log("║ 📝 MORTGAGE APPLICATION SUBMISSION ║");
     console.log(
       "╚════════════════════════════════════════════════════════════════╝"
     );
-    console.log("� Function: applyToMortgageProduct");
+    console.log("📋 Function: applyToMortgageProduct");
     console.log("📋 Call ID:", callId);
     console.log(
       "═══════════════════════════════════════════════════════════════════"
@@ -403,20 +323,10 @@ export class UnifiedConversationComponent implements OnInit, OnDestroy {
     console.log("🏦 Product Details:");
     console.log(JSON.stringify(product, null, 2));
     console.log(
-      "═══════════════════════════════════════════════════════════════════"
-    );
-    console.log("📋 Stored mortgageApplyParams:");
-    console.log(JSON.stringify(this.mortgageApplyParams, null, 2));
-    console.log(
-      "═══════════════════════════════════════════════════════════════════"
-    );
-    console.log("💼 Case Details Params:");
-    console.log(JSON.stringify(this.caseDetailsParams, null, 2));
-    console.log(
       "═══════════════════════════════════════════════════════════════════\n"
     );
 
-    // Prepare application parameters matching Flutter's applyParams structure
+    // Prepare application parameters
     const now = new Date();
     const applicationParams: MortgageApplicationParams = {
       userId: this._userId,
@@ -468,149 +378,49 @@ export class UnifiedConversationComponent implements OnInit, OnDestroy {
     console.log(
       "╔════════════════════════════════════════════════════════════════╗"
     );
-    console.log(
-      "║           📤 CONSTRUCTED APPLICATION PAYLOAD                   ║"
-    );
+    console.log("║ 📤 SENDING TO PARENT ANGULARJS ║");
     console.log(
       "╚════════════════════════════════════════════════════════════════╝"
     );
     console.log("🌐 Full Application Parameters:");
     console.log(JSON.stringify(applicationParams, null, 2));
     console.log(
-      "═══════════════════════════════════════════════════════════════════"
-    );
-    console.log("� Key Fields Summary:");
-    console.log("   • User ID:", applicationParams.userId);
-    console.log("   • User Company ID:", applicationParams.userCompanyId);
-    console.log("   • Lender Company ID:", applicationParams.lenderCompanyId);
-    console.log("   • Product ID:", applicationParams.productId);
-    console.log("   • Case Type:", applicationParams.caseType);
-    console.log(
-      "   • Property Value: £" +
-        applicationParams.propertyValuationAmount.toLocaleString()
-    );
-    console.log(
-      "   • Loan Amount: £" + applicationParams.loanAmount.toLocaleString()
-    );
-    console.log(
-      "   • Deposit: £" +
-        (applicationParams.depositAmount || 0).toLocaleString()
-    );
-    console.log(
-      "   • Term:",
-      applicationParams.preferredMortgageTermYear +
-        " years " +
-        applicationParams.preferredMortgageTermMonth +
-        " months"
-    );
-    console.log("   • Payment Method:", applicationParams.paymentMethod);
-    console.log(
-      "   • Annual Income: £" +
-        (applicationParams.anualIncome || 0).toLocaleString()
-    );
-    console.log(
-      "   • Rental Income: £" +
-        (applicationParams.anualRentalIncome || 0).toLocaleString()
-    );
-    console.log(
       "═══════════════════════════════════════════════════════════════════\n"
     );
+
+    // ✅ FIXED - Just call postCase (no subscribe)
+    this.caseService.postCase(applicationParams);
+    console.log("✅ Application request sent to parent AngularJS");
+
+    // Send notification to parent window
+    this.sendMessageToParent("MORTGAGE_APPLICATION_CREATED", {
+      productId: product.id,
+      lenderId: product.lenderId,
+      loanAmount: applicationParams.loanAmount,
+      propertyValue: applicationParams.propertyValuationAmount,
+      mortgageType: applicationParams.caseType,
+    });
+
+    // Match Flutter's success message format
+    const msg = `I have sent your mortgage application to our system. Please provide further information along with the necessary documents. A member of our support team will contact you soon after you submit the required information and documents for fact-finding.`;
 
     console.log(
       "╔════════════════════════════════════════════════════════════════╗"
     );
-    console.log(
-      "║           🌐 CALLING BACKEND API (TaskApiService)             ║"
-    );
+    console.log("║ 📤 SUBMITTING FUNCTION OUTPUT TO AI ║");
     console.log(
       "╚════════════════════════════════════════════════════════════════╝"
     );
-    console.log("API Method: postCaseWithFactFinds (matches Flutter)");
-    console.log("Endpoint: [Your API endpoint - to be configured]");
+    console.log("Message:", msg);
     console.log(
       "═══════════════════════════════════════════════════════════════════\n"
     );
 
-    // Call backend API (matches Flutter: TaskApiService().postCaseWithFactFinds)
-    this.caseService.postCase(applicationParams).subscribe({
-      next: (response) => {
-        console.log(
-          "\n╔════════════════════════════════════════════════════════════════╗"
-        );
-        console.log(
-          "║           ✅ APPLICATION SUBMITTED SUCCESSFULLY                ║"
-        );
-        console.log(
-          "╚════════════════════════════════════════════════════════════════╝"
-        );
-        console.log("📋 Backend Response:");
-        console.log(JSON.stringify(response, null, 2));
-        console.log(
-          "═══════════════════════════════════════════════════════════════════"
-        );
-
-        const caseId =
-          response?.ResponseData?.task?.id || Math.floor(Math.random() * 10000);
-        console.log("🎉 Case ID Created:", caseId);
-        console.log(
-          "═══════════════════════════════════════════════════════════════════\n"
-        );
-
-        // Match Flutter's success message format
-        const msg = `I have created an application for you, Case Id:${caseId}. Please provide further information along with the necessary documents. A member of our support team will contact you soon after you submit the required information and documents for fact-finding`;
-
-        console.log(
-          "╔════════════════════════════════════════════════════════════════╗"
-        );
-        console.log(
-          "║           📤 SUBMITTING FUNCTION OUTPUT TO AI                 ║"
-        );
-        console.log(
-          "╚════════════════════════════════════════════════════════════════╝"
-        );
-        console.log("Message:", msg);
-        console.log(
-          "═══════════════════════════════════════════════════════════════════\n"
-        );
-
-        this.submitFunctionOutput(callId, msg);
-
-        console.log("✅ applyToMortgageProduct completed successfully");
-        console.log(
-          "═══════════════════════════════════════════════════════════════════\n"
-        );
-      },
-      error: (error) => {
-        console.error(
-          "\n╔════════════════════════════════════════════════════════════════╗"
-        );
-        console.error(
-          "║           ❌ APPLICATION SUBMISSION FAILED                     ║"
-        );
-        console.error(
-          "╚════════════════════════════════════════════════════════════════╝"
-        );
-        console.error("🔴 Error Details:");
-        console.error(JSON.stringify(error, null, 2));
-        console.error(
-          "═══════════════════════════════════════════════════════════════════\n"
-        );
-
-        console.log("⚠️  Using fallback mock response...");
-        // Fallback to mock response
-        const mockCaseId = Math.floor(Math.random() * 10000);
-        const msg = `I have created an application for you, Case Id:${mockCaseId}. Please provide further information along with the necessary documents. A member of our support team will contact you soon after you submit the required information and documents for fact-finding`;
-
-        this.submitFunctionOutput(callId, msg);
-
-        console.log(
-          "⚠️  applyToMortgageProduct completed with fallback (API error)"
-        );
-        console.log(
-          "═══════════════════════════════════════════════════════════════════\n"
-        );
-      },
-    });
+    this.submitFunctionOutput(callId, msg);
+    console.log("✅ applyToMortgageProduct completed successfully");
+    console.log(
+      "═══════════════════════════════════════════════════════════════════\n"
+    );
   }
 
   // ✅ NEW: Handle navigation to mortgage sourcing
@@ -619,24 +429,79 @@ export class UnifiedConversationComponent implements OnInit, OnDestroy {
     callId: string
   ): void {
     if (navigate) {
-      console.log("🧭 Navigating to mortgage sourcing screen");
-      // TODO: Implement navigation
-      // this.router.navigate(['/mortgage-sourcing']);
+      // ✅ TELL PARENT to navigate to mortgage sourcing
+      this.sendMessageToParent("NAVIGATE_TO_MORTGAGE_SOURCING", {
+        mortgageParams: this.mortgageApplyParams,
+      });
 
       const msg = "Navigating to mortgage products list...";
       this.submitFunctionOutput(callId, msg);
     }
   }
 
+  // ✅ Add method to close modal from inside
+  public requestCloseModal(): void {
+    this.sendMessageToParent("CLOSE_MODAL", {
+      reason: "user_requested",
+    });
+  }
+
   // ✅ NEW: Handle navigation to fact-find
   private handleFactFindNavigation(navigate: boolean, callId: string): void {
     if (navigate) {
-      console.log("🧭 Navigating to fact-find screen");
-      // TODO: Implement navigation
-      // this.router.navigate(['/fact-find']);
+      // ✅ TELL PARENT to navigate to fact-find
+      this.sendMessageToParent("NAVIGATE_TO_FACT_FIND", {
+        userCompanyId: this._userCompanyId,
+        userId: this._userId,
+      });
 
       const msg = "Navigating to fact-find page...";
       this.submitFunctionOutput(callId, msg);
+    }
+  }
+
+  private triggerAngularJSMortgageSearch(params: {
+    loanAmount: number;
+    propertyValue: number;
+    mortgageTermYear: number;
+    mortgageTermMonth: number;
+    productTypeId: number;
+    paymentMethod: string;
+    initialRatePeriodMonths: number;
+    loanToValue: number;
+  }): void {
+    console.log("📤 Sending mortgage search to AngularJS parent:", params);
+
+    if (window.parent && window.parent !== window) {
+      // Map to AngularJS $rootScope.userQuickSourceModel structure
+      const angularJSPayload = {
+        ProductTypeId: params.productTypeId || 1, // 1 = Residential Mortgage
+        LoanAmount: params.loanAmount,
+        PurchasePrice: params.propertyValue,
+        PaymentMethod: params.paymentMethod || "Capital and Interest",
+        LoanTermYear: params.mortgageTermYear,
+        LoanTermMonth: params.mortgageTermMonth,
+        InitialRatePeriodMonths: params.initialRatePeriodMonths || 24,
+        LoanToValue: params.loanToValue,
+        SearchProductWithoutClientDetails: true,
+        UserId: this._userId,
+        OrderBy: "Rate", // Default sorting
+      };
+
+      window.parent.postMessage(
+        {
+          source: "MELODIE_AI",
+          type: "MELODIE_MORTGAGE_SEARCH",
+          data: angularJSPayload,
+          timestamp: new Date().toISOString(),
+        },
+        "*" // Use your actual domain in production
+      );
+
+      console.log("✅ Mortgage search request sent to AngularJS");
+      console.log("📋 Payload:", angularJSPayload);
+    } else {
+      console.warn("⚠️ No parent window found");
     }
   }
 

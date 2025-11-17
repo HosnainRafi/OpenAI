@@ -188,80 +188,125 @@ Personality:
   private async connectRealtime(): Promise<void> {
     try {
       this._rtcPeerConnection = new RTCPeerConnection();
+      console.log("Rtc", this._rtcPeerConnection);
 
-      // remote audio sink
+      // ✅ 1. Create audio element for playback (no mic needed for this)
       this._audioEl = document.createElement("audio");
       this._audioEl.autoplay = true;
 
       this._rtcPeerConnection.ontrack = (event) => {
         if (event.streams[0]) {
+          console.log("🔊 Received audio track from OpenAI");
           this._audioEl.srcObject = event.streams[0];
-          if (!document.body.contains(this._audioEl))
+          if (!document.body.contains(this._audioEl)) {
             document.body.appendChild(this._audioEl);
+            console.log("✅ Audio element added to DOM");
+          }
         }
       };
 
-      this._rtcPeerConnection.oniceconnectionstatechange = () => {
-        const s = this._rtcPeerConnection.iceConnectionState;
-        if (s === "disconnected" || s === "closed")
-          console.log("Peer connection closed.");
-      };
-
-      // VOICE mode: capture mic; CHAT mode: no mic
-      if (this._mode === "voice") {
+      // ✅ 2. Try to get microphone, but don't fail if unavailable
+      let hasRealMicrophone = false;
+      try {
         this._mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
-        this._mediaStream
-          .getTracks()
-          .forEach((track) =>
-            this._rtcPeerConnection.addTrack(track, this._mediaStream)
-          );
+
+        hasRealMicrophone = true;
+        console.log("✅ Microphone access granted - voice mode available");
+      } catch (micError: any) {
+        // Microphone not available - create silent dummy track instead
+        console.warn(
+          `⚠️ No microphone available (${micError.name}) - chat mode only`
+        );
+
+        // Create a silent audio stream (required for WebRTC to work)
+        const audioContext = new AudioContext();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0; // Silent
+        const dest = audioContext.createMediaStreamDestination();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(dest);
+        oscillator.start();
+
+        this._mediaStream = dest.stream;
+        console.log(
+          "✅ Created silent audio track - app will work in chat mode"
+        );
       }
 
-      // Data channel for Realtime events + text I/O
-      this._dataChannel =
-        this._rtcPeerConnection.createDataChannel("oai-events");
-      this._dataChannel.addEventListener("open", () =>
-        this.sendSessionUpdateForMode()
-      );
-      this._dataChannel.addEventListener("message", (event) =>
-        this.handleRealtimeEvent(event.data)
-      );
-
-      // Offer/answer
-      const offer = await this._rtcPeerConnection.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: false,
+      // ✅ 3. Add audio tracks (real mic or silent) to peer connection
+      this._mediaStream.getTracks().forEach((track) => {
+        this._rtcPeerConnection.addTrack(track, this._mediaStream);
+        console.log(
+          hasRealMicrophone
+            ? "➕ Added microphone track"
+            : "➕ Added silent audio track"
+        );
       });
+
+      // ✅ 4. Create data channel
+      this._dataChannel = await this._rtcPeerConnection.createDataChannel(
+        "oai-events",
+        { ordered: true }
+      );
+      console.log("✅ Data channel created");
+
+      // ✅ 5. Setup data channel event handlers
+      this._dataChannel.addEventListener("open", () => {
+        console.log("📡 Data channel OPEN");
+        this.sendSessionUpdateForMode();
+      });
+
+      this._dataChannel.addEventListener("message", (event) => {
+        this.handleRealtimeEvent(event.data); // ✅ Use existing handler
+      });
+
+      // ✅ 6. Create and send SDP offer
+      const offer = await this._rtcPeerConnection.createOffer();
       await this._rtcPeerConnection.setLocalDescription(offer);
+      console.log("📤 SDP Offer created");
 
-      const sdpResponse = await fetch(
-        `https://api.openai.com/v1/realtime?model=${encodeURIComponent(
-          this._model
-        )}`,
-        {
-          method: "POST",
-          body: offer.sdp,
-          headers: {
-            Authorization: `Bearer ${this._ephemeralKey}`,
-            "Content-Type": "application/sdp",
-          },
-        }
-      );
-
-      const answer = {
-        type: "answer" as RTCSdpType,
-        sdp: await sdpResponse.text(),
-      };
-      await this._rtcPeerConnection.setRemoteDescription(answer);
-
-      // Close via postMessage (kept from your code)
-      window.addEventListener("message", (event) => {
-        if (event.data === "close-connection") this.closeWebRTCConnection();
+      // ✅ 7. Send offer to OpenAI
+      const baseUrl = "https://api.openai.com/v1/realtime";
+      const model = this._model;
+      const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+        method: "POST",
+        body: offer.sdp,
+        headers: {
+          Authorization: `Bearer ${this._ephemeralKey}`,
+          "Content-Type": "application/sdp",
+        },
       });
+
+      if (!sdpResponse.ok) {
+        const errorText = await sdpResponse.text();
+        throw new Error(
+          `SDP exchange failed: ${sdpResponse.statusText} - ${errorText}`
+        );
+      }
+
+      // ✅ 8. Set remote description
+      const answerSdp = await sdpResponse.text();
+      const answer: RTCSessionDescriptionInit = {
+        type: "answer",
+        sdp: answerSdp,
+      };
+
+      await this._rtcPeerConnection.setRemoteDescription(answer);
+      console.log(
+        "✅ WebRTC connection established" +
+          (hasRealMicrophone ? " with microphone" : " (chat-only mode)")
+      );
     } catch (error) {
-      console.error("Error during Realtime init:", error);
+      console.error("❌ Error during Realtime init:", error);
+      throw error;
     }
   }
   public sendDataChannelMessage(payload: any): void {
@@ -328,6 +373,7 @@ Personality:
 
   /** New: send a text message over the Realtime connection (chat + voice). */
   public async sendText(message: string) {
+    console.log(this._dataChannel);
     if (!this._dataChannel || this._dataChannel.readyState !== "open") return;
 
     // ✅ CORRECT: Create conversation item first

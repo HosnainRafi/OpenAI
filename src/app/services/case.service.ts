@@ -1,6 +1,4 @@
 import { Injectable } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { Observable } from "rxjs";
 
 export interface MortgageApplicationParams {
   userId: number;
@@ -48,16 +46,48 @@ export interface MortgageApplicationParams {
   providedIn: "root",
 })
 export class CaseService {
-  // TODO: Replace with your actual API endpoint
-  private apiUrl = "https://your-api-endpoint.com/api/cases";
-
-  constructor(private http: HttpClient) {}
+  constructor() {}
 
   /**
-   * Post a new mortgage case/application to the backend
+   * ✅ Send mortgage search request to parent AngularJS app
+   * The parent app will call its own API via $scope.searchUserQuoteButtonClick()
    */
-  postCase(params: MortgageApplicationParams): Observable<any> {
-    console.log("📤 Posting mortgage application to backend:", params);
+  triggerMortgageSearch(params: {
+    propertyValue: number;
+    loanAmount: number;
+    mortgageType: string;
+  }): void {
+    console.log(
+      "📤 Sending mortgage search request to parent AngularJS:",
+      params
+    );
+
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          source: "MELODIE_AI",
+          type: "MELODIE_MORTGAGE_SEARCH",
+          data: {
+            propertyValue: params.propertyValue,
+            loanAmount: params.loanAmount,
+            mortgageType: params.mortgageType,
+          },
+          timestamp: new Date().toISOString(),
+        },
+        "*" // Use specific origin in production: "https://your-domain.com"
+      );
+      console.log("✅ Mortgage search request sent to parent");
+    } else {
+      console.warn("⚠️ No parent window found - running standalone");
+    }
+  }
+
+  /**
+   * ✅ Send mortgage application to parent AngularJS app
+   * The parent app will handle the actual API call
+   */
+  postCase(params: MortgageApplicationParams): void {
+    console.log("📤 Sending mortgage application to parent AngularJS:", params);
 
     const payload = {
       userId: params.userId,
@@ -101,11 +131,19 @@ export class CaseService {
       CurrencySymbol: params.CurrencySymbol || "£",
     };
 
-    console.log(
-      "📋 Full application payload:",
-      JSON.stringify(payload, null, 2)
-    );
-
-    return this.http.post(this.apiUrl, payload);
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          source: "MELODIE_AI",
+          type: "MELODIE_CREATE_MORTGAGE_CASE",
+          data: payload,
+          timestamp: new Date().toISOString(),
+        },
+        "*" // Use specific origin in production
+      );
+      console.log("✅ Mortgage application sent to parent AngularJS");
+    } else {
+      console.warn("⚠️ No parent window - cannot send application");
+    }
   }
 }
