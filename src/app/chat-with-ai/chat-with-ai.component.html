@@ -1,0 +1,75 @@
+<section class="page">
+  <div class="chatContainer" *ngIf="isActiveMode(ConversationMode.CHAT)">
+    <h2 class="chatTitle">AI Product search</h2>
+
+    <div class="errorMessage" *ngIf="initError">
+      {{ initError }}
+    </div>
+    <div class="loadingState" *ngIf="!isInitialized && !initError">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="messagesArea" #messagesArea>
+      <div
+        *ngFor="let message of messages"
+        class="message"
+        [class.incoming]="message.sender === 'bot'"
+        [class.outgoing]="message.sender === 'user'"
+      >
+        <div class="messageContent">
+          {{ message.text }}
+        </div>
+      </div>
+
+      <div class="message incoming" *ngIf="isTyping">
+        <div class="messageContent typingIndicator">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="searchContainer">
+      <div class="inputDiv">
+        <textarea
+          class="searchTextArea"
+          placeholder="Ask anything about mortgage sourcing through AI."
+          [(ngModel)]="newMessage"
+          (keypress)="onKeyPress($event)"
+          [disabled]="isTyping"
+        ></textarea>
+      </div>
+
+      <div class="talkToAIButtonDiv">
+        <button
+          *ngIf="newMessage.trim().length > 0; else emptyStateBtn"
+          class="talkToAIButton"
+          (click)="sendMessage()"
+          [disabled]="isTyping"
+        >
+          <img src="../../assets/images/AI search/arrow-right.svg" alt="" />
+        </button>
+
+        <ng-template #emptyStateBtn>
+          <button class="talkToAIButton" (click)="switchMode(ConversationMode.VOICE)" [disabled]="isTyping">
+            <img src="../../assets/images/AI search/ai-voice.svg" alt="" />
+          </button>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <div class="voiceModeContainer" *ngIf="isActiveMode(ConversationMode.VOICE)">
+    <button class="closeBtn" (click)="switchMode(ConversationMode.CHAT)">
+      <img style="width: 40px" src="../../assets/images/AI search/crossIcon.svg" alt="" />
+    </button>
+
+    <div>
+      <img class="voiceImage" src="../../assets/images/AI search/Speak to Elizabeth.gif" alt="Voice Mode" />
+      <audio id="audioPlayer" autoplay controls hidden></audio>
+
+      <p class="statusText">{{ statusText }}</p>
+    </div>
+  </div>
+</section>

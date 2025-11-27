@@ -1,5 +1,13 @@
 <div class="live-wrapper">
   <!-- ============================================ -->
+  <!-- HEADER -->
+  <!-- ============================================ -->
+  <div class="header">
+    <span class="back-arrow">&#8592;</span>
+    <h1 class="title">Melodie</h1>
+  </div>
+
+  <!-- ============================================ -->
   <!-- TABS -->
   <!-- ============================================ -->
   <div class="tabs">
@@ -47,15 +55,47 @@
       class="livetalk-container"
       *ngIf="isActiveMode(ConversationMode.VOICE)"
     >
-      <!-- <div class="title-text">Speak to Melodie</div> -->
+      <!-- <div class="title-text">Speak to Elizabeth</div> -->
 
-      <!-- ✅ UPDATED: Always show the GIF in voice mode -->
-      <div class="mic-wrapper">
-        <!-- The idle microphone SVG has been removed -->
-
-        <!-- This GIF will now always be visible when in LiveTalk mode -->
+      <!-- <div class="mic-wrapper" (click)="toggleVoice()">
         <img
-          src="assets/images/Speak to Melody_web.gif"
+          src="assets/images/Speak to Elizabeth_web.gif"
+          alt="Voice Assistant Animation"
+        />
+      </div> -->
+
+      <div
+        class="mic-wrapper"
+        (mousedown)="startListening($event)"
+        (mouseup)="stopListening($event)"
+        (mouseleave)="stopListening($event)"
+        (touchstart)="startListening($event)"
+        (touchend)="stopListening($event)"
+      >
+        <!-- ✅ IDLE STATE (not listening) -->
+        <svg
+          *ngIf="!isListening"
+          xmlns="http://www.w3.org/2000/svg"
+          width="120"
+          height="120"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="mic-icon"
+        >
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+
+        <!-- ✅ ACTIVE STATE (listening) -->
+        <img
+          *ngIf="isListening"
+          src="assets/images/Speak to Elizabeth_web.gif"
           alt="Listening..."
           class="pulsing"
         />

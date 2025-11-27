@@ -15,7 +15,7 @@ export class VoiceMessageWithOpenAIService {
     headers: HttpHeaders = new HttpHeaders();
     //.. baseApiUrl: string = environment.FM_url;
    // baseApiUrl: string = "https://chatms.financemagic.co.uk"
-    baseApiUrl: string = "https://demo.financemagic.co.uk"
+    baseApiUrl: string = "https://enm.financemagic.co.uk"
 
 
     //for for UAM and Legate Technologies

@@ -131,10 +131,12 @@
 }
 
 .title-text {
-  font-size: 22px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 40px;
+  font-size: 18pt;
+  font-weight: 800;
+  color: #516d98;
+  margin-bottom: 20px;
+  font-family: "Inter";
+  margin-top:40px;
 }
 
 /* Mic wrapper - indicate it's pressable */

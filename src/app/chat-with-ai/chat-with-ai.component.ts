@@ -6,6 +6,8 @@ import {
   ChangeDetectorRef,
   Inject,
   PLATFORM_ID,
+  ViewChild,
+  ElementRef,
 } from "@angular/core";
 import { isPlatformBrowser } from "@angular/common";
 import { CommonModule } from "@angular/common";
@@ -26,27 +28,29 @@ export enum ConversationMode {
 }
 
 @Component({
-  selector: "app-unified-conversation",
-  templateUrl: "./unified-conversation.component.html",
-  styleUrls: ["./unified-conversation.component.css"],
+  selector: "app-chat-with-ai",
+  templateUrl: "./chat-with-ai.component.html",
+  styleUrls: ["./chat-with-ai.component.css"],
   standalone: true,
   imports: [CommonModule, FormsModule],
   providers: [],
 })
-export class UnifiedConversationComponent implements OnInit, OnDestroy {
+export class ChatWithAIComponent implements OnInit, OnDestroy {
   private isBrowser: boolean;
+  @ViewChild("messagesArea")
+  private messagesContainer!: ElementRef<HTMLDivElement>;
 
   public ConversationMode = ConversationMode;
-  public currentMode: ConversationMode = ConversationMode.VOICE;
+  public currentMode: ConversationMode = ConversationMode.CHAT;
   public isInitialized: boolean = false;
   public initError: string | null = null;
-
   public newMessage: string = "";
   public messages: ChatMessage[] = [];
   public isTyping: boolean = false;
 
   public statusText: string = "";
   public isListening: boolean = false;
+  private responseTimeout: any;
 
   private EPHEMERAL_KEY = "";
   private readonly COMPANY_ID = 1;
@@ -72,67 +76,231 @@ export class UnifiedConversationComponent implements OnInit, OnDestroy {
     gDV: 0,
   };
 
+  private readonly RESPONSE_TIMEOUT_MS = 20000; // 20 seconds timeout
+
+  private startResponseTimeout(): void {
+    this.clearResponseTimeout();
+    this.responseTimeout = setTimeout(() => {
+      this.ngZone.run(() => {
+        if (this.isTyping) {
+          this.isTyping = false;
+          this.messages.push({
+            text: "Something went wrong. Please try again.",
+            sender: "bot",
+            timestamp: new Date(),
+          });
+          this.scrollToBottom();
+        }
+      });
+    }, this.RESPONSE_TIMEOUT_MS);
+  }
+
+  private clearResponseTimeout(): void {
+    if (this.responseTimeout) {
+      clearTimeout(this.responseTimeout);
+      this.responseTimeout = null;
+    }
+  }
+
   // Buffer map for accumulating streaming text chunks in chat mode
   private responseTextBuffers: { [responseId: string]: string } = {};
 
+  // private messageHandler = (event: MessageEvent) => {
+  //   if (event.data && typeof event.data === "string") {
+  //     try {
+  //       const objData = JSON.parse(event.data);
+
+  //       this.ngZone.run(() => {
+  //         if (objData.type === "response.done") {
+  //           const output = objData.response?.output?.[0];
+
+  //           // ✅ Handle function call
+  //           if (output?.type === "function_call") {
+  //             this.startResponseTimeout();
+  //             const functionName = output.name;
+  //             const argumentsStr = output.arguments;
+  //             const callId = output.call_id;
+
+  //             if (functionName && argumentsStr && callId) {
+  //               this.handleFunctionCall(functionName, argumentsStr, callId);
+  //             }
+  //           }
+
+  //           // Handle regular message
+  //           else if (
+  //             output?.type === "message" &&
+  //             output?.role === "assistant"
+  //           ) {
+  //             const content = output.content as Array<any>;
+  //             let aiText = content?.[0]?.text || content?.[0]?.transcript;
+
+  //             if (aiText && aiText.trim() !== "") {
+  //               this.clearResponseTimeout();
+  //               this.isTyping = false;
+  //               this.messages.push({
+  //                 text: aiText,
+  //                 sender: "bot",
+  //                 timestamp: new Date(),
+  //               });
+  //             }
+  //           }
+  //         }
+
+  //         // Handle user transcript
+  //         else if (
+  //           objData.type ===
+  //           "conversation.item.input_audio_transcription.completed"
+  //         ) {
+  //           const userText = objData.transcript;
+  //           if (userText) {
+  //             this.messages.push({
+  //               text: userText,
+  //               sender: "user",
+  //               timestamp: new Date(),
+  //             });
+  //           }
+  //         }
+
+  //         if (
+  //           objData.source === "MELODIE_PARENT" &&
+  //           objData.type === "SEARCH_RESULT_COUNT"
+  //         ) {
+  //           const shown = objData.data.shown;
+  //           const total = objData.data.total;
+
+  //           // Format the message exactly as you requested
+  //           const resultMessage = `Below Showing ${shown} of ${total} products.`;
+
+  //           this.messages.push({
+  //             text: resultMessage,
+  //             sender: "bot",
+  //             timestamp: new Date(),
+  //           });
+  //           setTimeout(() => this.scrollToBottom(), 0);
+  //         }
+  //       });
+  //     } catch (e) {
+  //       // Not JSON
+  //     }
+  //   }
+
+  //   if (event.data && event.data.source === "MELODIE_PARENT") {
+  //     if (event.data.type === "SWITCH_TO_CHAT_MODE") {
+  //       this.ngZone.run(() => {
+  //         console.log("📥 Received command to switch to chat mode");
+
+  //         // 1. Switch to Chat Mode (this stops the mic tracks)
+  //         this.switchMode(ConversationMode.CHAT);
+
+  //         // 2. Explicitly stop recording just in case
+  //         this.webRTCService.stopRecording();
+  //         this.isListening = false;
+  //       });
+  //       return;
+  //     }
+  //   }
+  // };
+
   private messageHandler = (event: MessageEvent) => {
-    if (event.data && typeof event.data === "string") {
-      try {
-        const objData = JSON.parse(event.data);
+    let objData: any = null;
 
-        this.ngZone.run(() => {
-          if (objData.type === "response.done") {
-            const output = objData.response?.output?.[0];
-
-            // ✅ Handle function call
-            if (output?.type === "function_call") {
-              const functionName = output.name;
-              const argumentsStr = output.arguments;
-              const callId = output.call_id;
-
-              if (functionName && argumentsStr && callId) {
-                this.handleFunctionCall(functionName, argumentsStr, callId);
-              }
-            }
-
-            // Handle regular message
-            else if (
-              output?.type === "message" &&
-              output?.role === "assistant"
-            ) {
-              const content = output.content as Array<any>;
-              let aiText = content?.[0]?.text || content?.[0]?.transcript;
-
-              if (aiText && aiText.trim() !== "") {
-                this.isTyping = false;
-                this.messages.push({
-                  text: aiText,
-                  sender: "bot",
-                  timestamp: new Date(),
-                });
-              }
-            }
-          }
-
-          // Handle user transcript
-          else if (
-            objData.type ===
-            "conversation.item.input_audio_transcription.completed"
-          ) {
-            const userText = objData.transcript;
-            if (userText) {
-              this.messages.push({
-                text: userText,
-                sender: "user",
-                timestamp: new Date(),
-              });
-            }
-          }
-        });
-      } catch (e) {
-        // Not JSON
+    // 1️⃣ Safely parse data (handle both String and Object)
+    try {
+      if (typeof event.data === "string") {
+        objData = JSON.parse(event.data);
+      } else if (typeof event.data === "object") {
+        objData = event.data;
       }
+    } catch (e) {
+      // Ignore parsing errors (e.g. non-JSON strings from other libs)
+      return;
     }
+
+    if (!objData) return;
+
+    this.ngZone.run(() => {
+      // ---------------------------------------------------------
+      // 🟢 HANDLE OPENAI EVENTS (Response, Function Calls, etc.)
+      // ---------------------------------------------------------
+      if (objData.type === "response.done") {
+        const output = objData.response?.output?.[0];
+
+        // ✅ Handle function call
+        if (output?.type === "function_call") {
+          this.startResponseTimeout();
+          const functionName = output.name;
+          const argumentsStr = output.arguments;
+          const callId = output.call_id;
+
+          if (functionName && argumentsStr && callId) {
+            this.handleFunctionCall(functionName, argumentsStr, callId);
+          }
+        }
+        // ✅ Handle regular message (AI Speaking)
+        else if (output?.type === "message" && output?.role === "assistant") {
+          const content = output.content as Array<any>;
+          let aiText = content?.[0]?.text || content?.[0]?.transcript;
+
+          if (aiText && aiText.trim() !== "") {
+            this.clearResponseTimeout();
+            this.isTyping = false;
+            this.messages.push({
+              text: aiText,
+              sender: "bot",
+              timestamp: new Date(),
+            });
+          }
+        }
+      }
+
+      // ✅ Handle user transcript (Live captions)
+      else if (
+        objData.type === "conversation.item.input_audio_transcription.completed"
+      ) {
+        const userText = objData.transcript;
+        if (userText) {
+          this.messages.push({
+            text: userText,
+            sender: "user",
+            timestamp: new Date(),
+          });
+        }
+      }
+
+      // ---------------------------------------------------------
+      // 🟡 HANDLE PARENT MESSAGES (AngularJS -> Angular)
+      // ---------------------------------------------------------
+
+      // 1. Handle Result Count Message
+      else if (
+        objData.source === "MELODIE_PARENT" &&
+        objData.type === "SEARCH_RESULT_COUNT"
+      ) {
+        const shown = objData.data.shown;
+        const total = objData.data.total;
+        const resultMessage = `Below Showing ${shown} of ${total} products.`;
+
+        this.messages.push({
+          text: resultMessage,
+          sender: "bot",
+          timestamp: new Date(),
+        });
+        setTimeout(() => this.scrollToBottom(), 0);
+      }
+
+      // 2. Handle Switch/Stop Command
+      else if (
+        objData.source === "MELODIE_PARENT" &&
+        objData.type === "SWITCH_TO_CHAT_MODE"
+      ) {
+        console.log("📥 Received command to switch to chat mode");
+
+        // Stop voice & recording immediately
+        this.switchMode(ConversationMode.CHAT);
+        this.webRTCService.stopRecording();
+        this.isListening = false;
+      }
+    });
   };
 
   // ✅ NEW: Handle function calls
@@ -234,6 +402,9 @@ export class UnifiedConversationComponent implements OnInit, OnDestroy {
 You're being redirected to the product sourcing page where you'll see all available mortgage products matching your criteria. The results are loading now!`;
 
       this.submitFunctionOutput(callId, output);
+      if (this.currentMode === ConversationMode.VOICE) {
+        this.webRTCService.stopRecording();
+      }
     } catch (error: any) {
       this.submitFunctionOutput(
         callId,
@@ -244,47 +415,48 @@ You're being redirected to the product sourcing page where you'll see all availa
 
   // 🟢 ADD THIS ENTIRE METHOD - After sourceMortgageProducts
   private sourceCriteriaProducts(args: any, callId: string): void {
-  try {
-    console.log('🔍 sourceCriteriaProducts called with:', args);
+    try {
+      console.log("🔍 sourceCriteriaProducts called with:", args);
 
-    // Use criteriaTags if available (array), otherwise fallback or empty
-    const criteriaTags = args.criteriaTags || [];
-    // Keep backward compatibility if criteriaName/Text are still sent
-    const criteriaName = args.criteriaName || '';
-    const criteriaText = args.criteriaText || '';
-    
-    const mortgageType = args.mortgageType || 'All Cases';
-    const userId = args.userId || this._userId;
+      // Use criteriaTags if available (array), otherwise fallback or empty
+      const criteriaTags = args.criteriaTags || [];
+      // Keep backward compatibility if criteriaName/Text are still sent
+      const criteriaName = args.criteriaName || "";
+      const criteriaText = args.criteriaText || "";
 
-    const criteriaParams = {
-      CriteriaTags: criteriaTags,   // ✅ Send array
-      CriteriaName: criteriaName,   // Optional fallback
-      CriteriaText: criteriaText,   // Optional fallback
-      MortgageType: mortgageType,
-      UserId: userId
-    };
+      const mortgageType = args.mortgageType || "All Cases";
+      const userId = args.userId || this._userId;
 
-    console.log('📊 Mapped Criteria Parameters:', criteriaParams);
+      const criteriaParams = {
+        CriteriaTags: criteriaTags, // ✅ Send array
+        CriteriaName: criteriaName, // Optional fallback
+        CriteriaText: criteriaText, // Optional fallback
+        MortgageType: mortgageType,
+        UserId: userId,
+      };
 
-    this.triggerAngularJSCriteriaSearch(criteriaParams);
+      console.log("📊 Mapped Criteria Parameters:", criteriaParams);
 
-    // Better response message using tags count
-    const tagsCount = criteriaTags.length > 0 ? criteriaTags.length : 1;
-    const searchDesc = criteriaTags.length > 0 ? 'tags' : 'criteria';
-    
-    const output = `Great! I've initiated your criteria search for ${tagsCount} ${searchDesc} under ${mortgageType}.\n\nYou're being redirected to the criteria hub where you'll see matching results. The search is loading now!`;
+      this.triggerAngularJSCriteriaSearch(criteriaParams);
 
-    this.submitFunctionOutput(callId, output);
+      // Better response message using tags count
+      const tagsCount = criteriaTags.length > 0 ? criteriaTags.length : 1;
+      const searchDesc = criteriaTags.length > 0 ? "tags" : "criteria";
 
-  } catch (error: any) {
-    console.error('❌ Error:', error);
-    this.submitFunctionOutput(
-      callId,
-      'Sorry, I encountered an error while searching criteria. Please try again.'
-    );
+      const output = `Great! I've initiated your criteria search for ${tagsCount} ${searchDesc} under ${mortgageType}.\n\nYou're being redirected to the criteria hub where you'll see matching results. The search is loading now!`;
+
+      this.submitFunctionOutput(callId, output);
+      if (this.currentMode === ConversationMode.VOICE) {
+        this.webRTCService.stopRecording();
+      }
+    } catch (error: any) {
+      console.error("❌ Error:", error);
+      this.submitFunctionOutput(
+        callId,
+        "Sorry, I encountered an error while searching criteria. Please try again."
+      );
+    }
   }
-}
-
 
   private sendMessageToParent(eventType: string, payload: any): void {
     if (window.parent && window.parent !== window) {
@@ -420,7 +592,6 @@ You're being redirected to the product sourcing page where you'll see all availa
     initialRatePeriodMonths: number;
     loanToValue: number;
   }): void {
-
     if (window.parent && window.parent !== window) {
       // ✅ Map to AngularJS $rootScope.userQuickSourceModel structure
       const angularJSPayload = {
@@ -452,23 +623,22 @@ You're being redirected to the product sourcing page where you'll see all availa
   }
 
   private triggerAngularJSCriteriaSearch(params: any): void {
-  console.log('📤 Sending criteria search to AngularJS parent:', params);
+    console.log("📤 Sending criteria search to AngularJS parent:", params);
 
-  if (window.parent && window.parent !== window) {
-    window.parent.postMessage(
-      {
-        source: 'MELODIE_AI',
-        type: 'MELODIE_CRITERIA_SEARCH',
-        data: params,
-        timestamp: new Date().toISOString()
-      },
-      '*'
-    );
-  } else {
-    console.warn('⚠️ No parent window found');
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          source: "MELODIE_AI",
+          type: "MELODIE_CRITERIA_SEARCH",
+          data: params,
+          timestamp: new Date().toISOString(),
+        },
+        "*"
+      );
+    } else {
+      console.warn("⚠️ No parent window found");
+    }
   }
-}
-
 
   // ✅ NEW: Submit function output back to OpenAI
   private submitFunctionOutput(callId: string, output: string): void {
@@ -518,9 +688,7 @@ You're being redirected to the product sourcing page where you'll see all availa
   }
 
   async ngOnInit(): Promise<void> {
-
     this.activatedRoute.queryParams.subscribe((params) => {
-
       const userCompanyIdValue = params["userCompanyId"];
       const userIdValue = params["userId"];
       const initiatorIdValue = params["initiatorId"];
@@ -542,8 +710,8 @@ You're being redirected to the product sourcing page where you'll see all availa
   // ✅ NEW: Handle case when no query params
   private handleNoQueryParams(): void {
     this.isInitialized = true;
-    this.initError =
-      "Missing required parameters. Please access via proper link.";
+    this.initError = "";
+    // "Missing required parameters. Please access via proper link.";
     this.messages.push({
       text: "Hello! Please access this page with proper authentication parameters.",
       sender: "bot",
@@ -552,7 +720,6 @@ You're being redirected to the product sourcing page where you'll see all availa
   }
 
   public async getOpenAIAuthenticationTokenByRequestModelByUserCompany(): Promise<void> {
-
     var openAIAuthenticationRequestModel =
       {} as OpenAIAuthenticationRequestModel;
     openAIAuthenticationRequestModel.ProjectName = "UAM_UVC";
@@ -581,7 +748,6 @@ You're being redirected to the product sourcing page where you'll see all availa
   }
 
   public async initWebRTCService(): Promise<void> {
-
     if (!this.isBrowser) {
       return;
     }
@@ -604,7 +770,7 @@ You're being redirected to the product sourcing page where you'll see all availa
         this._userId,
         this._initiatorId,
         this._initiatorName,
-        "voice",
+        "chat",
         this.MODEL
       );
 
@@ -616,13 +782,11 @@ You're being redirected to the product sourcing page where you'll see all availa
       }
 
       this.messages.push({
-        text: "Hello! Start speaking to chat with me.",
+        text: "Hello, Start chatting with me.",
         sender: "bot",
         timestamp: new Date(),
       });
-
     } catch (error: any) {
-
       // ✅ CRITICAL: Set initialized to true even on error
       this.isInitialized = true;
 
@@ -643,6 +807,7 @@ You're being redirected to the product sourcing page where you'll see all availa
   }
 
   ngOnDestroy(): void {
+    this.clearResponseTimeout();
     if (!this.isBrowser) return;
 
     if (typeof window !== "undefined") {
@@ -651,8 +816,7 @@ You're being redirected to the product sourcing page where you'll see all availa
 
     try {
       this.webRTCService.closeWebRTCConnection();
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   async switchMode(mode: ConversationMode): Promise<void> {
@@ -682,7 +846,6 @@ You're being redirected to the product sourcing page where you'll see all availa
 
         // Stop voice and switch to chat
         await this.webRTCService.switchToChat();
-
       }
 
       this.currentMode = mode;
@@ -694,7 +857,12 @@ You're being redirected to the product sourcing page where you'll see all availa
   isActiveMode(mode: ConversationMode): boolean {
     return this.currentMode === mode;
   }
-
+  scrollToBottom(): void {
+    try {
+      const container = this.messagesContainer.nativeElement;
+      container.scrollTop = container.scrollHeight;
+    } catch {}
+  }
   async sendMessage(): Promise<void> {
     if (!this.isBrowser) return;
 
@@ -708,6 +876,7 @@ You're being redirected to the product sourcing page where you'll see all availa
     };
     this.messages.push(userMessage);
     this.newMessage = "";
+    setTimeout(() => this.scrollToBottom(), 0);
 
     if (!this.EPHEMERAL_KEY) {
       setTimeout(() => {
@@ -716,16 +885,20 @@ You're being redirected to the product sourcing page where you'll see all availa
           sender: "bot",
           timestamp: new Date(),
         });
+        setTimeout(() => this.scrollToBottom(), 0);
       }, 500);
       return;
     }
 
     this.isTyping = true;
+    this.startResponseTimeout();
 
     try {
       await this.webRTCService.sendText(trimmedMessage);
+      setTimeout(() => this.scrollToBottom(), 0);
     } catch (error: any) {
       this.isTyping = false;
+      this.clearResponseTimeout();
       this.messages.push({
         text: "Failed to send. Please try again.",
         sender: "bot",
